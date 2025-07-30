@@ -21,36 +21,27 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class ReceiptOCRProcessor:
-    """Handles OCR processing for receipt images"""
 
     def __init__(self):
         self.reader = easyocr.Reader(['en'])
 
     def preprocess_image(self, image_path: str) -> np.ndarray:
-        """
-        Preprocess image for better OCR results
-        """
         # Read image
         img = cv2.imread(image_path)
         if img is None:
             raise ValueError(f"Could not read image: {image_path}")
 
-        # Convert to grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        # Apply Gaussian blur to reduce noise
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
-        # Apply adaptive threshold
         thresh = cv2.adaptiveThreshold(
             blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
         )
 
-        # Morphological operations to clean up
         kernel = np.ones((1, 1), np.uint8)
         cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
 
-        # Resize image if too small
         height, width = cleaned.shape
         if height < 800:
             scale_factor = 800 / height
@@ -60,7 +51,7 @@ class ReceiptOCRProcessor:
         return cleaned
 
     def extract_text_tesseract(self, image: np.ndarray) -> str:
-        """Extract text using Tesseract OCR"""
+        
         try:
             custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,/-:$#() '
             text = pytesseract.image_to_string(image, config=custom_config)
@@ -70,7 +61,7 @@ class ReceiptOCRProcessor:
             return ""
 
     def extract_text_easyocr(self, image: np.ndarray) -> str:
-        """Extract text using EasyOCR"""
+        
         try:
             results = self.reader.readtext(image)
             text_lines = [result[1] for result in results if result[2] > 0.3]  # confidence > 0.3
@@ -80,9 +71,7 @@ class ReceiptOCRProcessor:
             return ""
 
     def extract_text(self, image_path: str) -> str:
-        """
-        Extract text from receipt image using both OCR engines
-        """
+      
         # Preprocess image
         processed_img = self.preprocess_image(image_path)
 
@@ -106,7 +95,6 @@ class ReceiptOCRProcessor:
         return combined_text
 
 class ReceiptNERModel:
-    """Custom NER model for receipt information extraction"""
 
     def __init__(self, model_path: Optional[str] = None):
         self.nlp = None
@@ -136,10 +124,7 @@ class ReceiptNERModel:
 
 
     def create_training_data(self) -> List[Tuple[str, Dict]]:
-        """
-        Create sample training data for the NER model
-        This should be expanded with real receipt data
-        """
+
         training_data = [
             ("Invoice #12345 dated 2023-12-15", {
                 "entities": [(8, 14, "INVOICE_ID"), (21, 31, "INVOICE_DATE")]
@@ -163,9 +148,7 @@ class ReceiptNERModel:
         return training_data
 
     def train_model(self, training_data: List[Tuple[str, Dict]], n_iter: int = 30) -> None:
-        """
-        Train the NER model with provided data
-        """
+        
         logger.info("Training NER model...")
 
         # Convert training data to spaCy format
@@ -198,9 +181,7 @@ class ReceiptNERModel:
         logger.info(f"Model saved to {output_dir}")
 
     def predict(self, text: str) -> Dict[str, List[str]]:
-        """
-        Extract entities from text using the trained model
-        """
+        
         doc = self.nlp(text)
         entities = {
             "INVOICE_ID": [],
@@ -218,7 +199,6 @@ class ReceiptNERModel:
         return entities
 
 class ReceiptExtractor:
-    """Main class that combines OCR and NER for complete receipt processing"""
 
     def __init__(self, model_path: Optional[str] = None):
         self.ocr_processor = ReceiptOCRProcessor()
@@ -230,9 +210,7 @@ class ReceiptExtractor:
             self.ner_model.train_model(training_data)
 
     def extract_with_regex(self, text: str) -> Dict[str, any]:
-        """
-        Fallback extraction using regex patterns
-        """
+        
         results = {
             "invoice_id": [],
             "invoice_date": [],
@@ -282,9 +260,7 @@ class ReceiptExtractor:
         return results
 
     def process_receipt(self, image_path: str) -> Dict[str, any]:
-        """
-        Complete receipt processing pipeline
-        """
+        
         logger.info(f"Processing receipt: {image_path}")
 
         try:
@@ -330,7 +306,6 @@ class ReceiptExtractor:
 
 
     def _clean_and_dedupe(self, items: List[str]) -> List[str]:
-        """Clean and deduplicate extracted items"""
         cleaned = []
         seen = set()
 
@@ -343,7 +318,7 @@ class ReceiptExtractor:
         return cleaned[:3]  # Return top 3 matches
 
     def _extract_line_items(self, text: str, ner_results: Dict) -> List[Dict]:
-        """Extract and structure line items"""
+        
         line_items = []
 
         # Use NER results if available
@@ -380,7 +355,7 @@ class ReceiptExtractor:
         return line_items[:10]  # Return top 10 items
 
     def _calculate_confidence(self, ner_results: Dict, regex_results: Dict) -> float:
-        """Calculate confidence score for extraction"""
+
         score = 0.0
         total_possible = 3.0  # invoice_id, date, line_items
 
@@ -394,26 +369,16 @@ class ReceiptExtractor:
         return round(score / total_possible, 2)
 
     def train_custom_model(self, training_data: List[Tuple[str, Dict]], model_save_path: str):
-        """
-        Train a custom model with user-provided data
-        """
+        
         self.ner_model.train_model(training_data, n_iter=50)
         self.ner_model.save_model(model_save_path)
         logger.info(f"Custom model trained and saved to {model_save_path}")
 
 def main():
-    """
-    Example usage of the Receipt Extraction System
-    """
+    
     # Initialize the extractor
     extractor = ReceiptExtractor()
 
-    # Example: Process a receipt image
-    # receipt_path = "path/to/your/receipt.jpg"
-    # results = extractor.process_receipt(receipt_path)
-    # print(json.dumps(results, indent=2))
-
-    # Example training data format for custom fields
     custom_training_data = [
         ("Store: Walmart Invoice: WMT123456 Date: 2024-01-15", {
             "entities": [(21, 30, "INVOICE_ID"), (37, 47, "INVOICE_DATE")]
@@ -424,8 +389,6 @@ def main():
         })
     ]
 
-    # Train custom model
-    # extractor.train_custom_model(custom_training_data, "custom_receipt_model")
 
     print("Receipt OCR and NER System initialized successfully!")
     print("To use: extractor.process_receipt('path/to/receipt/image.jpg')")
@@ -433,7 +396,6 @@ def main():
 if __name__ == "__main__":
     main()
 
-# Example API endpoint (Flask implementation)
 def create_flask_api():
     """
     Optional Flask API wrapper for the receipt extractor
@@ -453,14 +415,11 @@ def create_flask_api():
             if file.filename == '':
                 return jsonify({"error": "No image selected"}), 400
 
-            # Save uploaded file temporarily
             temp_path = f"/tmp/{file.filename}"
             file.save(temp_path)
 
-            # Process receipt
             results = extractor.process_receipt(temp_path)
 
-            # Clean up temp file
             Path(temp_path).unlink(missing_ok=True)
 
             return jsonify(results)
