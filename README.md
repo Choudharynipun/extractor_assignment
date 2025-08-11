@@ -1,6 +1,7 @@
-### Assignment for MASTERS INDIA.
+### OCR SYSTEM FOR RECIEPT PROCESSING, FOR SMALL SCALE ENTERPRISES:- 
 
-This is an assignment project made on the requirements given. However, apart from fullfilling the requirements given in the task, it also has some additional features to make this project more scalable and modular. Some of them are listed below:-
+This is an OCR_NER based system used to process the data in Reciepts for better processing and analysis, made for small scale enterprises.
+It has the following key features: -
 
 * **Modular Design**
   The entire pipeline is broken into clean modules — OCR engine, NER model, and Regex matcher — making it easy to debug, extend, or swap components.
